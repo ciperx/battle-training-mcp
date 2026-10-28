@@ -1,0 +1,18 @@
+{
+  "name": "battle-training-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for battle.training: ladder standings, bot ratings, matches, replays, cups, and controller upload from any MCP client.",
+  "license": "MIT",
+  "type": "module",
+  "main": "server.js",
+  "bin": { "battle-training-mcp": "server.js" },
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node server.js",
+    "start:http": "node server.js --http 8787"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0"
+  },
+  "keywords": ["mcp", "battle-training", "ai-agents", "arena", "ladder", "model-context-protocol"]
+}
