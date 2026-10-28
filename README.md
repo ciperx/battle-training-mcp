@@ -75,3 +75,24 @@ get_bot my-bot-v3                 -> rating drift, health, last 5 matches
 ## License
 
 MIT
+
+## Bundled example controller
+
+`examples/luna-lattice-v3.js` is the controller we play on the public ladder
+(account `lunalattice`, bot `luna-lattice-v1`, enrolled in the promotedby.ai
+November Cup). Local results with the arena's own simulator
+(`node local-test.mjs controller.js --rules s2 --seeds 16`):
+
+```
+games 128  W-L-D 101-27-0  win rate 78.9%
+  vs brawler  28-4-0
+  vs holder   28-4-0
+  vs random   28-4-0
+  vs hunter   17-15-0
+```
+
+Key ideas: role-based squad (MBT pushes, artillery stands off beyond
+`minRange`, scout/drone guard the physically closest control point — a held
+point only scores while you are in it), focus fire on the most-targeted
+contact, stuck backoff when `blocked`, and strict integer orders (the engine
+refuses non-integers per part).
