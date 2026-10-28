@@ -89,8 +89,8 @@ globalThis.controller = {
   draft(h) {
     const d = h.draft;
     if (!d) return undefined;
-    // role-based squad: MBT (push) + artillery (standoff) + scout (spot) + drone (cheap screen)
-    // cost = mbt4 + artillery4 + scout2 + drone2 = 12 = budget exactly
+    // role-based squad: MBT (push) + scout (spot) + drone (screen) + missile (anti-chase lock-on)
+    // cost = mbt4 + scout2 + drone2 + missile4 = 12 = budget exactly
     const pick = ["mbt", "artillery", "scout", "drone"];
     const cost = pick.reduce((c, k) => c + (d.costs[k] ?? 99), 0);
     return cost <= d.budget && pick.every(k => d.roster.includes(k)) ? pick : undefined;
@@ -116,15 +116,20 @@ globalThis.controller = {
       if (tgt) lastSeen[tgt.id || (tgt.x + ":" + tgt.y)] = [tgt.x, tgt.y, tickCount];
       plan.push({ u, spec, tgt });
     }
-    // focus fire: pick the enemy most of our units can hit (cluster)
-    let focus = null, focusCount = 0;
+    // focus fire: enemy that threatens our squad most = closest to our
+    // centroid, weighted by how many of our units can engage it
+    let cx = 0, cy = 0, n = 0;
+    for (const p of plan) { if (p.u.alive) { cx += p.u.x; cy += p.u.y; n++; } }
+    if (n) { cx /= n; cy /= n; }
+    let focus = null, focusScore = -Infinity;
     const tally = {};
     for (const p of plan) {
-      if (p.tgt) {
-        const key = p.tgt.x + ":" + p.tgt.y;
-        tally[key] = (tally[key] || 0) + 1;
-        if (tally[key] > focusCount) { focusCount = tally[key]; focus = p.tgt; }
-      }
+      if (!p.tgt) continue;
+      const key = p.tgt.x + ":" + p.tgt.y;
+      tally[key] = (tally[key] || 0) + 1;
+      const threat = 1e6 / (1 + dist(cx, cy, p.tgt.x, p.tgt.y) / FP);
+      const s = threat + tally[key] * 3e5;
+      if (s > focusScore) { focusScore = s; focus = p.tgt; }
     }
     for (const p of plan) {
       const u = p.u, spec = p.spec;
@@ -132,13 +137,35 @@ globalThis.controller = {
       const tgt = p.tgt || (focus ? { x: focus.x, y: focus.y, d: dist(u.x, u.y, focus.x, focus.y) } : null);
       const hpFrac = (u.hp || 1) / (spec.hp || 1);
 
-      if (u.kind === "scout" || u.kind === "drone") {
-        // spotter/screen: guard the closest un-owned objective (hold it), only
-        // back off from direct-fire threats that come inside our own range
+      if (u.kind === "missile") {
+        // lock-on: track the threat closest to our centroid, keep sending target
+        let goal;
+        if (tgt && tgt.d < spec.gun.maxRange * 0.8) {
+          goal = [u.x * 2 - tgt.x, u.y * 2 - tgt.y]; // kite
+        } else {
+          goal = pickObjective(o.objectives, u.x, u.y, false);
+        }
+        if (goal && o.canMove) Object.assign(order, steerTowards(u, goal[0], goal[1], spec));
+        if (tgt && spec.gun.mode === "lock") {
+          order.target = tgt.id;
+          if (u.lockTicks >= (spec.gun.lockTicks || 0) && u.reload === 0 && tgt.d >= (spec.gun.minRange || 0) && tgt.d <= spec.gun.maxRange) {
+            order.fire = true;
+          }
+        }
+      } else if (u.kind === "scout" || u.kind === "drone") {
+        // spotter/screen: guard the closest objective (hold it), bait chasers
+        // toward our artillery instead of fleeing blindly
         let goal;
         const guard = guardPoint(o.objectives, u.x, u.y);
+        // friendly artillery anchor for baiting
+        let arty = null;
+        for (const q of plan) {
+          if (q.u.kind === "artillery" && q.u.alive) { arty = q.u; break; }
+        }
+        const hurt = (u.hp || 1) / (spec.hp || 1) < 0.55;
         if (tgt && tgt.d < spec.gun.maxRange * 0.9) {
-          goal = [u.x * 2 - tgt.x, u.y * 2 - tgt.y]; // back off
+          // hurt scout being chased: lead the chaser toward artillery
+          goal = arty && hurt ? [arty.x, arty.y] : [u.x * 2 - tgt.x, u.y * 2 - tgt.y];
         } else if (guard && dist(u.x, u.y, guard[0], guard[1]) > FP * 3) {
           goal = guard; // push in and hold
         } else if (guard) {

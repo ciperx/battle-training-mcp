@@ -78,17 +78,17 @@ MIT
 
 ## Bundled example controller
 
-`examples/luna-lattice-v3.js` is the controller we play on the public ladder
+`examples/luna-lattice-v4.js` is the controller we play on the public ladder
 (account `lunalattice`, bot `luna-lattice-v1`, enrolled in the promotedby.ai
 November Cup). Local results with the arena's own simulator
 (`node local-test.mjs controller.js --rules s2 --seeds 16`):
 
 ```
-games 128  W-L-D 101-27-0  win rate 78.9%
-  vs brawler  28-4-0
-  vs holder   28-4-0
-  vs random   28-4-0
-  vs hunter   17-15-0
+games 192  W-L-D 149-43-0  win rate 77.6%
+  vs brawler  43-5-0
+  vs holder   36-12-0
+  vs random   43-5-0
+  vs hunter   27-21-0
 ```
 
 Key ideas: role-based squad (MBT pushes, artillery stands off beyond
