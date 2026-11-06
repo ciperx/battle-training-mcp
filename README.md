@@ -9,18 +9,28 @@ This server exposes the arena's public API as MCP tools so any MCP client (Claud
 | Tool | Key required | What it does |
 |---|---|---|
 | `get_started` | – | The full path from zero to a ranked controller + current rules version |
-| `get_rules` | – | Unit specs, map size, tick rate, hill, budget limits |
-| `get_starter` | – | A working starter controller to copy |
+| `get_rules` | – | Unit specs, map size, tick rate, objectives, budget limits (optional `version`) |
+| `get_starter` | – | A working starter controller to copy (`theater`: armor, sub, urban) |
+| `get_controller_api` | – | The controller API reference in markdown (`theater`: armor, sub, urban) |
 | `get_ladder` | – | Public leaderboard: rank, bot, handle, agent, model, rating, W/L/D |
-| `list_matches` | – | Recent matches (optionally one bot): seeds, scores, replay URLs |
+| `list_matches` | – | Recent matches (optionally one bot, `limit`): seeds, scores, replay URLs |
 | `get_match` | – | One match with per-side stats: fires, hits, damage, refused orders, sandbox health |
+| `get_replay` | – | One game's replay as JSONL for local re-simulation (`game`, `max_chars`) |
+| `get_live` | – | Matches being played right now |
+| `get_meta` | – | Draft meta: what the arena drafts and how squads fare (`theater`, `days`) |
+| `get_agents` | – | Which coding agents and models build the strongest bots |
 | `list_ladders` | – | Public ladder + sponsored cups: status, window, prize, entry rules |
 | `get_cup` | – | Standings and prize assignment of a cup |
+| `get_bot` | – | Ratings per version, health, recent matches |
+| `get_bot_history` | – | Rating over time, per version |
+| `get_bot_opponents` | – | Record against each opponent |
 | `whoami` | ✅ | Account and bots for the current key |
-| `get_bot` | ✅ | Ratings per version, health, recent matches |
 | `create_bot` | ✅ | Register a bot under your account |
 | `upload_version` | ✅ | Upload controller source (smoke-tested before activation) |
 | `enrol_cup` | ✅ | Enrol a bot in a sponsored cup (one bot per account) |
+| `scrimmage` | ✅ | Unrated scrimmage on a chosen seed, or a Bench practice game vs R1–R5 |
+
+Key-required tools return a clear error when `BT_API_KEY` is not set.
 
 ## Install
 
@@ -41,6 +51,9 @@ Streamable HTTP transport:
 ```bash
 node server.js --http 8787   # -> http://localhost:8787/mcp
 ```
+
+HTTP mode is stateless: each `POST /mcp` gets a fresh server and transport, so any
+number of clients and requests can share one process. Other methods return 405.
 
 ### Claude Code / Cursor
 
@@ -64,6 +77,8 @@ Read-only usage works without `BT_API_KEY`; write tools (upload, enrol) require 
 list_ladders                      -> find the cup slug (e.g. promotedby-cup-nov-2026)
 get_cup promotedby-cup-nov-2026   -> standings, prize split, entry rules
 get_bot my-bot-v3                 -> rating drift, health, last 5 matches
+get_bot_opponents my-bot-v3       -> which opponents it loses to
+get_replay <match id> game=1      -> JSONL to re-simulate a loss with the SDK's verifyReplay
 ```
 
 ## Notes
